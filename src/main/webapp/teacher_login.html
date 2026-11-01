@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy2Drive - כניסת מורה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="js/loader.js"></script>
+    
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 text-center">
+        
+        <div class="flex justify-center mb-6">
+            <img src="images/logo2.jpg" alt="Easy2Drive" class="h-20 object-contain multiply-logo">
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-1">כניסת מורה</h2>
+            <p class="text-gray-500">הזן מספר טלפון כדי להתחבר או להירשם</p>
+        </div>
+
+        <form action="TeacherLoginServlet" method="POST" class="space-y-6">
+            <div class="text-right">
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">מספר טלפון</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="05X-XXXXXXX" 
+                    class="w-full px-4 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-left dir-ltr shadow-sm"
+                >
+                <p id="phoneError" class="text-red-500 text-xs mt-2 hidden font-bold text-right"></p>
+            </div>
+
+            <button type="button" onclick="handleTeacherLogin()" class="w-full h-16 text-xl font-bold bg-blue-600 text-white rounded-2xl shadow-lg transition-all hover:scale-[1.02] hover:bg-blue-700 flex items-center justify-center">
+                כניסה למערכת
+            </button>
+        </form>
+
+        <div class="mt-8">
+            <a href="index.html" class="inline-flex items-center text-gray-400 hover:text-blue-600 transition-colors font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l7-7-7-7" />
+                </svg>
+                חזרה לדף הבית
+            </a>
+        </div>
+
+    </div>
+    
+   <script>
+   
+   /**
+    * INPUT RESTRICTION
+    * Prevents non-numeric characters from being typed (ASCII 48-57 only).
+    */
+	document.getElementById('phone').addEventListener('keypress', function (e) {
+		if (e.which < 48 || e.which > 57) {
+            e.preventDefault();
+        }
+    });
+
+	/**
+     * REAL-TIME CLEANUP & UI RESET
+     * Removes invalid characters on paste and hides error styling during typing.
+     */
+    document.getElementById('phone').addEventListener('input', function() {
+   		this.value = this.value.replace(/[^0-9]/g, '');
+        this.classList.remove('border-red-500', 'ring-red-500', 'ring-2');
+        document.getElementById('phoneError').classList.add('hidden');
+    });
+
+    /**
+     * TEACHER LOGIN HANDLER
+     * Validates phone format and submits the data to TeacherLoginServlet.
+     */
+    async function handleTeacherLogin() {
+        const phoneInput = document.getElementById('phone');
+        const phoneError = document.getElementById('phoneError');
+        const val = phoneInput.value.trim();
+
+        // Reset UI State
+        phoneInput.classList.remove('border-red-500', 'ring-red-500', 'ring-2');
+        phoneError.classList.add('hidden');
+
+        // Field Required Validation
+        if (val === "") {
+            phoneError.innerText = "שדה חובה";
+            phoneError.classList.remove('hidden');
+            phoneInput.classList.add('border-red-500', 'ring-red-500', 'ring-2');
+            return;
+        }
+        // Phone Format Validation (9-10 digits)
+        if (!/^\d{9,10}$/.test(val)) {
+            phoneError.innerText = "מספר טלפון לא תקין (9-10 ספרות)";
+            phoneError.classList.remove('hidden');
+            phoneInput.classList.add('border-red-500', 'ring-red-500', 'ring-2');
+            return;
+        }
+        // Form submission to the server
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'TeacherLoginServlet';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'phone';
+        input.value = val;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+    </script>
+
+</body>
+</html>

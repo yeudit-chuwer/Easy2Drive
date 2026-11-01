@@ -1,0 +1,36 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: easy2drive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: easy2drive
+  template:
+    metadata:
+      labels:
+        app: easy2drive
+    spec:
+      containers:
+        - name: easy2drive
+          image: 808935753986.dkr.ecr.eu-north-1.amazonaws.com/easy2drive:2.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: "easy2drive-db.c3a6o8ymartj.eu-north-1.rds.amazonaws.com"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: "easy2drive_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: easy2drive-db-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easy2drive-db-secret
+                  key: DB_PASSWORD

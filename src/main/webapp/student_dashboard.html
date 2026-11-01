@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Easy2Drive - לוח בקרה תלמיד</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Assistant', sans-serif; background-color: #f8fafc; }
+        .multiply-logo { mix-blend-mode: multiply; }
+        .chat-bubble { max-width: 80%; padding: 12px; border-radius: 20px; margin-bottom: 8px; font-size: 0.9rem; position: relative; }
+		.chat-teacher { align-self: flex-start; background-color: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-right-radius: 4px; }
+		.chat-me { align-self: flex-end; background-color: #3b82f6; color: white; border-bottom-left-radius: 4px; }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
+    </style>
+    <script src="js/loader.js"></script>
+</head>
+<body class="text-right">
+
+    <nav class="bg-white border-b p-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-3">
+            <img src="images/logo1.jpg" alt="Logo" class="h-10 multiply-logo">
+            <span class="font-bold text-gray-700">שלום, <span id="user_greeting">תלמיד</span></span>
+        </div>
+                <button onclick="performLogout('manual')" class="p-2 text-red-500 hover:bg-red-50 rounded-xl transition"><i data-lucide="log-out"></i></button>
+    </nav>
+    
+    <div id="reminderCard" class="hidden bg-blue-600 text-white p-6 rounded-3xl shadow-lg mb-6 animate-pulse">
+	    <div class="flex justify-between items-center">
+	        <div>
+	            <p class="text-xs opacity-80 font-bold uppercase">השיעור הקרוב שלך</p>
+	            <h3 id="reminderText" class="text-xl font-black">טוען נתונים...</h3>
+	        </div>
+	        <i data-lucide="bell" class="w-10 h-10 opacity-50"></i>
+	    </div>
+	</div>
+
+    <div id="alertPanel" class="max-w-7xl mx-auto px-4 md:px-6 mt-4 hidden">
+        <div class="bg-orange-50 border-r-4 border-orange-500 p-4 rounded-2xl shadow-md animate-pulse-slow flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-orange-100 p-2 rounded-full text-orange-600"><i data-lucide="alert-triangle"></i></div>
+                <div>
+                    <h4 class="font-bold text-orange-900 text-sm">עדכון חשוב לגבי השיעור שלך</h4>
+                    <p id="alertMessage" class="text-orange-800 text-xs"></p>
+                </div>
+            </div>
+            <button onclick="dismissAlert()" class="bg-orange-200/50 hover:bg-orange-200 p-1 rounded-full transition">
+                <i data-lucide="x" class="w-5 h-5 text-orange-700"></i>
+            </button>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white p-6 rounded-3xl border shadow-sm text-center">
+                <div id="user_initial" class="w-16 h-16 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">?</div>
+                <h2 id="student_full_name" class="font-bold text-gray-800 mb-4 text-center text-lg">טוען...</h2>
+                <button onclick="goToPayments()" class="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-2xl font-bold hover:bg-blue-100 transition border border-blue-100 shadow-sm"><i data-lucide="credit-card"></i> תשלומים וחובות</button>
+            </div>
+            <div class="bg-white p-5 rounded-3xl border shadow-sm text-xs space-y-3">
+                <h3 class="font-bold border-b pb-2">מקרא יומן</h3>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-green-50 border border-green-200 rounded"></div><span>יום עבודה (פנוי להזמנה)</span></div>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-blue-500 rounded"></div><span>שיעור שקבעת</span></div>
+            </div>
+        </div>
+        <div class="lg:col-span-3 bg-white p-4 md:p-6 rounded-3xl shadow-xl border border-gray-100">
+            <div id="calendar"></div>
+        </div>
+    </main>
+
+    <div id="lessonDetailsModal" class="fixed inset-0 z-[160] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-right" dir="rtl">
+        <div class="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-xl">פרטי השיעור שלי</h3>
+                <button onclick="closeModal('lessonDetailsModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-4 mb-8">
+                <div class="flex items-center gap-3 bg-blue-50 p-4 rounded-2xl">
+                    <i data-lucide="calendar" class="text-blue-600"></i>
+                    <div><p class="text-xs text-blue-600 font-bold uppercase">תאריך</p><p id="detDate" class="font-bold"></p></div>
+                </div>
+                <div class="flex items-center gap-3 bg-blue-50 p-4 rounded-2xl">
+                    <i data-lucide="clock" class="text-purple-600"></i>
+                    <div><p class="text-xs text-purple-600 font-bold uppercase">שעה</p><p id="detTime" class="font-bold"></p></div>
+                </div>
+            </div>
+            <button onclick="handleDeleteLesson()" class="w-full py-4 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-bold hover:bg-red-100 transition flex items-center justify-center gap-2">
+                <i data-lucide="trash-2" class="w-5 h-5"></i> ביטול שיעור
+            </button>
+        </div>
+    </div>
+
+    <div id="bookLessonModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right">
+        <div class="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-blue-50 text-blue-800">
+                <h3 class="font-bold text-lg">הזמנת שיעור: <span id="bookingDate"></span></h3>
+                <button onclick="closeModal('bookLessonModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div id="availableSlots" class="grid grid-cols-3 gap-2"></div>
+                <div id="noSlotsMessage" class="hidden text-center py-4 text-red-500 font-bold italic border-2 border-dashed border-red-100 rounded-2xl">אין שעות פנויות ביום זה.</div>
+                <button id="confirmBtn" class="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hidden shadow-lg hover:bg-blue-700 transition">אשר הזמנת שיעור</button>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="openChatModal()" class="fixed bottom-6 left-6 bg-blue-600 text-white p-5 rounded-full shadow-2xl hover:scale-110 transition-all z-[100] flex items-center justify-center">
+        <i data-lucide="message-circle" class="w-8 h-8"></i>
+        <span id="msgBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center font-bold hidden border-2 border-white shadow-sm">0</span>
+    </button>
+
+    <div id="chatModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-right">
+        <div class="bg-white w-full max-w-md h-[80vh] rounded-[32px] overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-5 bg-blue-600 text-white flex justify-between items-center shadow-lg"><h3 class="font-bold text-lg text-right">צ'אט עם המורה</h3><button onclick="closeModal('chatModal')"><i data-lucide="x"></i></button></div>
+            <div id="studentChatHistory" class="flex-grow overflow-y-auto p-5 bg-gray-50 flex flex-col space-y-2"></div>
+            <div class="p-4 border-t bg-white flex gap-2">
+                <input type="text" id="studentChatInput" placeholder="כתוב הודעה למורה..." class="flex-grow p-4 border rounded-2xl bg-gray-50 outline-none text-right shadow-inner">
+                <button onclick="sendChatMessage()" class="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 transition shadow-md"><i data-lucide="send"></i></button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="customAlert" class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/70 backdrop-blur-md p-4" dir="rtl">
+    
+</div>
+
+    <script>
+   		//Initialize Lucide icons on the page
+        lucide.createIcons();
+
+		//Variable to store the timer for inactivity detection
+        let idleTimeout;
+
+        //Function Logs user out and shows a styled alert based on the reason (idle or unauthorized)
+       async function performLogout(reason) {
+	   		try {
+		    	   //Invalidate the server session and clear local security flags
+			    await fetch('LogoutServlet');
+			    localStorage.removeItem('isLoggedIn');
+	
+			    window.location.href = 'index.html';
+
+	   		} catch (error) {
+	   	        console.error('Logout failed:', error);
+	   	        window.location.href = 'index.html';
+	   	    }
+		    
+		    //If user is idle but in another tab, wait until they return to show the message
+		    if (reason === "idle" && document.visibilityState !== 'visible') {
+		        document.addEventListener('visibilitychange', function handleBack() {
+		            if (document.visibilityState === 'visible') {
+		                document.removeEventListener('visibilitychange', handleBack);
+		                performLogout("idle");
+		            }
+		        });
+		        return;
+		    }
+
+    //Prepare and display the custom logout modal
+    const modal = document.getElementById('customAlert');
+    const title = document.getElementById('alertTitle');
+    const msg = document.getElementById('logoutAlertMessage');
+
+    if (reason === "idle") {
+        title.innerText = "פג תוקף החיבור";
+        msg.innerText = "עבר הרבה זמן ללא פעילות. לביטחונך, המערכת התנתקה.";
+    } else if (reason === "unauthorized") {
+        title.innerText = "גישה אסורה";
+        msg.innerText = "אין לך הרשאה לצפות בדף זה. אנא התחבר מחדש.";
+    }
+
+ 	// Show modal and refresh Lucide icons inside it
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  
+}
+		//Resets the inactivity timer whenever user activity (mouse, keyboard, etc.) is detected.
+        function resetIdleTimer() {
+            clearTimeout(idleTimeout);
+         //Set timeout to 30 minutes (1,800,000 ms) or as specified
+            idleTimeout = setTimeout(() => performLogout("idle"), 1800000);
+        }
+
+        //Modal Utility Functions
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); lucide.createIcons(); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function handleLogout() { location.href = 'index.html'; }
+
+   		//Calculates the date limits for the calendar based on teacher settings.
+        function getCalendarLimits(rangeValue) {
+            let now = new Date();
+            let start = new Date(now);
+            let end = new Date(now);
+
+            if (rangeValue <= 14) { 
+            	// Weekly or bi-weekly mode: limit from the current Sunday to the defined range
+                let day = now.getDay(); 
+                start.setDate(now.getDate() - day); 
+                end.setDate(start.getDate() + rangeValue - 1); 
+            } else { // Monthly mode: limit from the 1st until the end of the current month
+                start.setDate(1); 
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0); 
+            }
+            return { start, end };
+        }
+
+        //Main Initialization on Page Load
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const phone = urlParams.get('phone');
+            window.studentPhone = phone;
+
+         	// Redirect if phone parameter is missing
+            if (!phone) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+            	// Step 1: Verify valid server-side session
+                const sessionRes = await fetch('CheckSessionServlet');
+
+                if (!sessionRes.ok) {
+                	// Handle session expiration for previously logged-in users
+                    const wasLoggedIn = localStorage.getItem('isLoggedIn');
+
+                    if (phone && wasLoggedIn) {
+                        localStorage.removeItem('isLoggedIn'); 
+                        await performLogout("idle"); 
+                    } else {
+                    	window.location.href = 'index.html?error=unauthorized';
+                    }
+                    return;
+                }
+             	// Step 2: Session is valid, initialize activity listeners
+                localStorage.setItem('isLoggedIn', 'true');
+                
+                const loggedInPhone = await sessionRes.text();
+                if (loggedInPhone !== phone) { 
+                    alert("גישה אסורה! אין לך הרשאה לצפות בדף זה.");
+                    window.location.href = 'index.html'; 
+                    return; 
+                }
+
+                
+                resetIdleTimer();
+                window.onmousemove = resetIdleTimer;
+                window.onkeydown = resetIdleTimer;
+                window.onclick = resetIdleTimer;
+                window.onscroll = resetIdleTimer; 
+                window.ontouchstart = resetIdleTimer; 
+
+             	//Step 3: Fetch Student Profile Data
+                const res = await fetch('GetStudentDataServlet?phone=' + phone + '&t=' + Date.now());
+                const s = await res.json();
+
+             	//Update UI elements with student data
+                document.getElementById('user_greeting').innerText = s.name;
+                document.getElementById('student_full_name').innerText = s.name;
+                document.getElementById('user_initial').innerText = s.name.charAt(0).toUpperCase();
+                
+                window.currentTeacherId = s.teacherId;
+                window.currentTeacherPhone = s.teacherPhone;
+
+                //Step 4: Fetch Teacher's specific settings (booking range, cancel hours, etc.)
+                const tRes = await fetch('GetTeacherDataServlet?phone=' + s.teacherPhone);
+                window.teacherSettings = await tRes.json(); 
+
+             	// Step 5: Initialize core components
+                initCalendar();
+                checkNewMessages(); 
+                updateReminder();
+                
+            } catch(e) { 
+                console.error("Error loading dashboard:", e);
+                window.location.href = 'index.html?error=notfound'; 
+            }
+        });
+
+        //Initializes FullCalendar with custom Hebrew locale and business logic.
+        function initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            
+			//Helper to retrieve teacher's booking restrictions
+            function getLimits() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const rangeValue = parseInt(window.teacherSettings.bookingRange || 7);
+                
+                let limitStart = new Date(today);
+                let limitEnd = new Date(today);
+
+                
+                const startOfThisWeek = new Date(today);
+                startOfThisWeek.setDate(today.getDate() - today.getDay());
+
+                if (rangeValue > 14) {
+                	//Calendar Month mode
+                    limitEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                   
+                    if (today.getDate() > 25) {
+                        limitEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+                    }
+                } else {
+                	//7 or 14 day mode starting from current week
+                    limitEnd = new Date(startOfThisWeek);
+                    const daysToAdd = (rangeValue === 14) ? 13 : 6;
+                    limitEnd.setDate(startOfThisWeek.getDate() + daysToAdd);
+                }
+
+                limitEnd.setHours(23, 59, 59, 999);
+                console.log("Range Mode:", rangeValue > 14 ? "Month" : "Week/2Weeks");
+                console.log("Blocking date (limitEnd):", limitEnd.toDateString());
+
+                return { limitStart, limitEnd };
+            }
+            //Helper to visualy disable invalid dates in calendar
+            function disableCell(info) {
+                info.el.style.backgroundColor = '#f1f5f9';
+                info.el.style.opacity = '0.5';
+                info.el.style.cursor = 'not-allowed';
+                info.el.classList.add('fc-day-disabled-custom');
+
+                const bg = info.el.querySelector('.fc-daygrid-bg-event');
+                if (bg) bg.style.display = 'none';
+            }
+
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                locale: 'he',
+                direction: 'rtl',
+                initialView: 'dayGridMonth',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+                
+				//Logic to disable dates outside allowed range
+                dayCellDidMount: function(info) {
+                    const { limitStart, limitEnd } = getLimits();
+
+                    const cellDate = new Date(info.date);
+                    cellDate.setHours(0,0,0,0);
+                    if (cellDate < limitStart || cellDate > limitEnd) {
+                        disableCell(info);
+                    }
+                },
+
+             	//Prevent clicking on disabled dates
+                dateClick: function(info) {
+                    const { limitStart, limitEnd } = getLimits();
+
+                    const clicked = new Date(info.dateStr);
+                    clicked.setHours(0,0,0,0);
+
+                    if (clicked < limitStart || clicked > limitEnd) return;
+
+                    handleDateSelection(info.dateStr);
+                },
+
+             	//Handle clicking existing personal lessons
+                eventClick: function(info) {
+                    if (info.event.display !== 'background') {
+                        document.getElementById('detDate').innerText = info.event.extendedProps.date;
+                        document.getElementById('detTime').innerText = info.event.extendedProps.time;
+                        window.selectedLesson = { 
+                            id: info.event.id, 
+                            date: info.event.extendedProps.date, 
+                            time: info.event.extendedProps.time 
+                        };
+                        openModal('lessonDetailsModal');
+                    }
+                },
+
+             	//Source function to fetch WorkDays and booked Lessons
+                events: async function(info, sc) {
+                    try {
+                        const [resW, resL] = await Promise.all([
+                            fetch(`GetWorkDaysServlet?teacherId=${window.currentTeacherId}&t=${Date.now()}`),
+                            fetch(`GetStudentLessonsServlet?phone=${window.studentPhone}&t=${Date.now()}`)
+                        ]);
+
+                        const workDays = await resW.json();
+                        const lessonsRaw = await resL.json();
+
+                     // Map lesson objects to FullCalendar format
+                        const lessons = lessonsRaw.map(l => ({
+                            id: String(l.id),
+                            title: 'שיעור נהיגה',
+                            start: l.date + 'T' + l.time,
+                            backgroundColor: '#3b82f6',
+                            display: 'block',
+                            extendedProps: { date: l.date, time: l.time }
+                        }));
+
+                        sc([...workDays, ...lessons]);
+                    } catch (e) { sc([]); }
+                }
+            });
+
+            calendar.render();
+        }
+
+
+
+
+
+        //Fetches and displays available time slots for a selected date
+        async function handleDateSelection(dateStr) {
+            document.getElementById('bookingDate').innerText = dateStr;
+            const res = await fetch(`GetWorkDaySlotsServlet?teacherId=${window.currentTeacherId}&date=${dateStr}&t=${Date.now()}`);
+            const slots = await res.json();
+            const container = document.getElementById('availableSlots');
+            container.innerHTML = '';
+            
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
+         	//Filter slots that are available and have not passed yet (if today)
+            const freeSlots = slots.filter(slot => {
+                if (!slot.available) return false;
+                if (dateStr === todayStr) {
+                    const [h, m] = slot.time.split(':');
+                    const slotTime = new Date(); slotTime.setHours(parseInt(h), parseInt(m), 0, 0);
+                    return slotTime > now;
+                }
+                return true;
+            });
+
+            if (freeSlots.length > 0) {
+                document.getElementById('noSlotsMessage').classList.add('hidden');
+                freeSlots.forEach(slot => {
+                    const btn = document.createElement('button');
+                    btn.className = "p-3 border-2 border-green-200 rounded-2xl bg-green-50 text-green-700 font-bold hover:bg-green-100 transition-all text-center text-sm shadow-sm";
+                    btn.innerText = slot.time;
+                    btn.onclick = () => {
+                    	//Update UI to show selected slot
+                        document.querySelectorAll('#availableSlots button').forEach(b => {
+                            b.classList.replace('border-blue-500', 'border-green-200');
+                            b.classList.replace('bg-blue-50', 'bg-green-50');
+                            b.classList.replace('text-blue-700', 'text-green-700');
+                        });
+                        btn.classList.replace('border-green-200', 'border-blue-500');
+                        btn.classList.replace('bg-green-50', 'bg-blue-50');
+                        btn.classList.replace('text-green-700', 'text-blue-700');
+                        window.selectedSlot = { date: dateStr, time: slot.time };
+                        document.getElementById('confirmBtn').classList.remove('hidden');
+                    };
+                    container.appendChild(btn);
+                });
+            } else {
+                document.getElementById('noSlotsMessage').classList.remove('hidden');
+                document.getElementById('confirmBtn').classList.add('hidden');
+            }
+            openModal('bookLessonModal');
+        }
+
+        //Submits a booking request for a selected time slot to the server Handles both successful bookings and business-logic errors (e.g., exceeding monthly quotas).
+        async function handleBookLesson() {
+            //Prepare the POST request body using the globally stored selected slot details
+            const body = new URLSearchParams({ 
+                studentPhone: window.studentPhone, 
+                date: window.selectedSlot.date, 
+                time: window.selectedSlot.time 
+            });
+
+            try {
+                //Execute the reservation request
+                const res = await fetch('BookLessonServlet', { method: 'POST', body });
+
+                //Success - Notify the user and refresh the page to update the calendar
+                if (res.ok) {
+                    alert("השיעור הוזמן בהצלחה!");
+                    location.reload();
+                } else {
+                    //Business Logic Error The server might reject the booking (e.g., student reached max lesson limit). We extract the specific error message sent by the Servlet. 
+                    const errorMsg = await res.text();
+                    alert("שגיאה בהזמנה: " + errorMsg);
+                }
+            } catch (e) {
+                //Network or System Error
+                console.error("Fetch error:", e);
+                alert("תקלת תקשורת בביצוע ההזמנה.");
+            }
+        }
+        document.getElementById('confirmBtn').onclick = handleBookLesson;
+
+        //Processes lesson cancellation after verifying teacher's cancellation policy.
+        async function handleDeleteLesson() {
+            const lesson = window.selectedLesson;
+            
+            if (!lesson || !lesson.id || lesson.id === "undefined") { 
+                alert("תקלה בזיהוי השיעור. אנא רענן את הדף ונסה שוב."); 
+                return; 
+            }
+
+            const now = new Date();
+            const lessonStart = new Date(lesson.date + 'T' + lesson.time);
+            const diffHours = (lessonStart - now) / (1000 * 60 * 60);
+
+         	//Check if current time allows cancellation (e.g., 24 hours before)
+            const limit = window.teacherSettings.cancelHours || 24;
+
+            if (diffHours < limit) {
+                alert(`ניתן לבטל רק ${limit} שעות מראש לפי הגדרות המורה.`);
+                return;
+            }
+
+            if (confirm("האם אתה בטוח שברצונך לבטל את השיעור?")) {
+                const res = await fetch(`DeleteLessonServlet?id=${lesson.id}`, { method: 'DELETE' });
+                if (res.ok) { 
+                    alert("השיעור בוטל בהצלחה."); 
+                    location.reload(); 
+                } else {
+                    alert("שגיאה בביטול השיעור בשרת.");
+                }
+            }
+        }
+
+        //Scans the student's lessons to find the single closest future appointment.
+        async function checkUpcomingLesson() {
+            //Extract student identification from the URL and fetch their lesson history
+            const phone = new URLSearchParams(window.location.search).get('phone');
+            const res = await fetch(`GetStudentLessonsServlet?phone=${phone}`);
+            const lessons = await res.json();
+
+            if (lessons.length > 0) {
+                const now = new Date();
+                //Map raw lesson data to JavaScript Date objects and filter for future events
+                const nextLesson = lessons
+                    .map(l => ({ ...l, dateTime: new Date(`${l.date}T${l.start_time}`) }))
+                    .filter(l => l.dateTime > now) //Keep only lessons that haven't happened yet
+                    .sort((a, b) => a.dateTime - b.dateTime)[0]; //Pick the earliest chronological lesson
+
+                if (nextLesson) {
+                    //Calculate the time difference in hours between 'now' and the lesson start
+                    const diffHours = (nextLesson.dateTime - now) / (1000 * 60 * 60);
+                    
+					//Display the reminder card only if it meets the teacher's notification threshold.
+                    if (diffHours <= teacherReminderHours) { 
+                        document.getElementById('reminderCard').classList.remove('hidden');
+                        document.getElementById('reminderText').innerText = 
+                            `בעוד ${Math.floor(diffHours)} שעות: בתאריך ${nextLesson.date} בשעה ${nextLesson.start_time}`;
+                    }
+                }
+            }
+        }
+
+        //Handles the real-time chat modal and message display.
+        async function openChatModal() {
+            try {
+                const res = await fetch(`GetChatHistoryServlet?phone=${window.studentPhone}&role=student&t=${Date.now()}`);
+                const messages = await res.json();
+                const historyDiv = document.getElementById('studentChatHistory');
+
+             	//Map JSON messages to HTML chat bubbles
+                historyDiv.innerHTML = messages.map(m => {
+                    const isOut = m.direction === 'out';
+                    const cleanContent = m.content.replace("📢 ", "");
+                    const badge = (!isOut && !m.content.includes("📢")) ? 
+                        '<span class="bg-blue-100 text-blue-600 text-[9px] px-1.5 py-0.5 rounded-full ml-1 font-bold">אישי</span>' : '';
+
+                    return `
+                    <div class="flex flex-col ${isOut ? 'items-end' : 'items-start'} mb-2">
+                        <span class="text-[9px] text-gray-400 mx-2 text-right">${badge}${isOut ? 'אני' : m.partyName} • ${m.date}</span>
+                        <div class="chat-bubble ${isOut ? 'chat-me' : 'chat-teacher'} shadow-sm text-right">${cleanContent}</div>
+                    </div>`;
+                }).join('');
+                    
+                openModal('chatModal');
+                setTimeout(() => historyDiv.scrollTop = historyDiv.scrollHeight, 100);
+
+             	//Reset UI unread badge and update server-side read status
+                const b = document.getElementById('msgBadge');
+                if (b) { b.innerText = "0"; b.classList.add('hidden'); }
+
+                await fetch(`GetChatHistoryServlet?phone=${window.studentPhone}&role=student&action=markRead&t=${Date.now()}`);
+                console.log("Messages marked as read");
+                
+            } catch (e) { console.error("Chat error:", e); }
+        }
+
+        //Sends a new chat message from the student to the teacher.
+        async function sendChatMessage() {
+            //Step 1: Access the input field and validate that it's not just whitespace
+            const input = document.getElementById('studentChatInput');
+            if(!input.value.trim()) return;
+            
+         	//Step 2: Prepare parameters for the server
+            //Include the teacher's phone as the target and the student's phone as the sender
+            const params = new URLSearchParams({ phone: window.currentTeacherPhone, recipient: window.studentPhone, content: "(הודעה מתלמיד) " + input.value });
+         	//Step 3: Execute the POST request to the message handling servlet
+            await fetch('SendMessageServlet', { method: 'POST', body: params });
+			//Clear the input field for the next message
+            input.value = '';
+			//Immediately refresh the chat history view to show the sent message
+            openChatModal();
+        }
+
+        //Polls the server for incoming messages and updates the notification badge.
+        async function checkNewMessages() {
+            try {
+                const res = await fetch(`GetChatHistoryServlet?phone=${window.studentPhone}&role=student&t=${Date.now()}`);
+                const messages = await res.json();
+
+             	//Count messages where direction is 'in' (received) and isRead is false
+                const unread = messages.filter(m => 
+                    m.direction === 'in' && 
+                    (m.isRead === false || m.isRead === 0 || m.isRead === "false")
+                ).length;
+
+                //Update UI: Show red badge if unread > 0, otherwise hide it
+                const b = document.getElementById('msgBadge');
+                if (unread > 0) { 
+                    b.innerText = unread; 
+                    b.classList.remove('hidden'); 
+                } else {
+                    b.classList.add('hidden');
+                }
+            } catch (e) { console.error("ספירת הודעות נכשלה:", e); }
+        }
+
+        //Visually hides the orange alert panel and updates the server to clear notifications.
+        async function dismissAlert() {
+        	//Step 1: Immediate visual feedback - hide the panel
+            document.getElementById('alertPanel').classList.add('hidden');
+            
+         	//Step 2: Inform the server that the notification has been acknowledged
+            try {
+                await fetch(`GetChatHistoryServlet?phone=${window.studentPhone}&role=student&action=markRead&t=${Date.now()}`);
+                console.log("ההתראה סומנה כנקראה בבסיס הנתונים");
+            } catch (e) {
+                console.error("שגיאה בעדכון סטטוס קריאה:", e);
+            }
+        }
+
+        function goToPayments() { location.href = 'student_payments.html?phone=' + window.studentPhone; }
+
+        //Core logic for the "Upcoming Lesson Reminder Card" and calculates time remaining and lesson sequence index.
+        async function updateReminder() {
+            const res = await fetch(`GetStudentLessonsServlet?phone=${window.studentPhone}&t=${Date.now()}`);
+            const lessons = await res.json();
+            const now = new Date();
+            // Get local YYYY-MM-DD and HH:mm to compare properly without time zone shifts
+            const localToday = now.toLocaleDateString('en-CA'); 
+            const localTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+            
+            const reminderLimit = window.teacherSettings.reminderHours || 2;
+
+         	//Filter for upcoming lessons within the reminder window
+            const upcomingLessons = lessons
+            .map(l => {
+                // Create a safe date object for calculation
+                const lessonDateTime = new Date(`${l.date}T${l.time}`);
+                
+                return {
+                    ...l, 
+                    ts: lessonDateTime,
+                    // Calculate historical index
+                    lessonIndex: lessons.filter(prev => {
+                        if (prev.date < l.date) return true;
+                        if (prev.date === l.date && prev.time < l.time) return true;
+                        return false;
+                    }).length + 1
+                };
+            })
+            .filter(l => {
+                // Only show lessons that are in the future based on local time
+                if (l.date < localToday) return false;
+                if (l.date === localToday && l.time <= localTime) return false;
+
+                const diffMs = l.ts - now;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                
+                // Show reminder only if within the teacher's defined window (e.g., 2 hours)
+                return diffHours > 0 && diffHours < reminderLimit;
+            })
+            .sort((a, b) => a.ts - b.ts); 
+
+        const reminderCard = document.getElementById('reminderCard');
+        const reminderText = document.getElementById('reminderText');
+
+        if (upcomingLessons.length > 0) {
+            reminderCard.classList.remove('hidden');
+            
+            const content = upcomingLessons.map(next => {
+                const diffMs = next.ts - now;
+                let totalMinutes = Math.floor(diffMs / (1000 * 60));
+                const h = Math.floor(totalMinutes / 60);
+                const m = totalMinutes % 60;
+                
+                let timeText = "";
+                if (h > 0) timeText += `${h} שעות ו-`;
+                timeText += `${m} דקות`;
+
+                return `
+                    <div class="mb-4 last:mb-0 border-b border-white/20 pb-2 last:border-0 text-right" dir="rtl">
+                        <p class="text-lg font-black">שיעור נהיגה מס' ${next.lessonIndex}</p>
+                        <p class="text-sm font-normal opacity-90">בתאריך ${next.date} בשעה ${next.time}</p>
+                        <p class="text-sm font-bold">בעוד ${timeText}</p>
+                    </div>
+                `;
+            }).join('');
+
+            reminderText.innerHTML = content;
+        } else {
+            reminderCard.classList.add('hidden');
+        }
+    }
+     	//Interval to refresh reminders every 60 seconds
+        setInterval(updateReminder, 60000);
+    </script>
+</body>
+</html>

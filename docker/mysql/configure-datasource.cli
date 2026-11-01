@@ -1,0 +1,4 @@
+embed-server --server-config=standalone.xml --std-out=echo
+/subsystem=datasources/jdbc-driver=mysql:add(driver-name=mysql,driver-module-name=com.mysql,driver-class-name=com.mysql.cj.jdbc.Driver)
+/subsystem=datasources/data-source=Easy2DriveDS:add(jndi-name=java:/jboss/datasources/Easy2DriveDS,driver-name=mysql,connection-url="jdbc:mysql://${env.DB_HOST}:${env.DB_PORT:3306}/${env.DB_NAME}?sslMode=REQUIRED",user-name="${env.DB_USER}",password="${env.DB_PASSWORD}",enabled=true,use-java-context=true,jta=true)
+stop-embedded-server

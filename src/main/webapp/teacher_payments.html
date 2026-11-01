@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy2Drive - ניהול תשלומים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Assistant', sans-serif; background-color: #f8fafc; }
+        .multiply-logo { mix-blend-mode: multiply; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .filter-btn.active { background-color: white; shadow: 0 1px 3px rgba(0,0,0,0.1); color: #2563eb; }
+    </style>
+    <script src="js/loader.js"></script>
+</head>
+<body class="text-right">
+    <nav class="bg-white border-b sticky top-0 z-50 px-4 md:px-8 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-3">
+            <img src="images/logo1.jpg" alt="Logo" class="h-10 md:h-12 object-contain multiply-logo">
+            <span class="font-bold text-gray-700 border-r pr-3 mr-1">ניהול תשלומים</span>
+        </div>
+        <button onclick="history.back()" class="text-gray-600 hover:text-blue-600 flex items-center gap-2 font-bold transition">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            חזרה ליומן
+        </button>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4 md:p-8">
+        <h1 class="text-3xl font-bold mb-8 text-gray-800">סיכום כספי והיסטוריה</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-3xl border border-gray-100 card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-bold">סה"כ התקבל</p>
+                        <p id="totalPaid" class="text-3xl font-black text-green-600">₪0</p>
+                    </div>
+                    <div class="p-3 bg-green-50 rounded-2xl text-green-600"><i data-lucide="check-circle"></i></div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-gray-100 card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-bold">ממתין לגבייה</p>
+                        <p id="totalPending" class="text-3xl font-black text-yellow-600">₪0</p>
+                    </div>
+                    <div class="p-3 bg-yellow-50 rounded-2xl text-yellow-600"><i data-lucide="clock"></i></div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-gray-100 card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-bold">שיעורים ללא תשלום</p>
+                        <p id="unpaidCount" class="text-3xl font-black text-blue-600">0</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-2xl text-blue-600"><i data-lucide="dollar-sign"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-10">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i data-lucide="alert-circle" class="text-yellow-500"></i>
+                שיעורים שטרם שולמו
+            </h2>
+            <div id="unpaidList" class="grid gap-4"></div>
+        </div>
+
+        <div class="bg-white rounded-3xl border card-shadow overflow-hidden">
+            <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 class="text-xl font-bold">היסטוריית תשלומים</h2>
+                <div class="flex bg-gray-100 p-1 rounded-xl">
+                    <button id="btn-all" onclick="setFilter('all')" class="filter-btn px-4 py-2 rounded-lg text-sm font-bold transition bg-white shadow-sm text-blue-600">הכל</button>
+                    <button id="btn-paid" onclick="setFilter('paid')" class="filter-btn px-4 py-2 rounded-lg text-sm font-bold transition text-gray-500">שולם</button>
+                    <button id="btn-pending" onclick="setFilter('pending')" class="filter-btn px-4 py-2 rounded-lg text-sm font-bold transition text-gray-500">ממתין</button>
+                </div>
+            </div>
+            <div id="paymentsHistory" class="divide-y"></div>
+        </div>
+    </main>
+
+    <script>
+	    let paymentsData = []; 
+	    let currentFilter = 'all';
+	
+	    /**
+	     * DATA LOADING
+	     * Fetches payment records for a specific teacher via phone parameter.
+	     */
+	    async function loadDataFromServlet() {
+	        const phone = new URLSearchParams(window.location.search).get('phone');
+	        if (!phone) return;
+	        
+	        try {
+	            const res = await fetch('GetTeacherPaymentsServlet?phone=' + phone);
+	            paymentsData = await res.json();
+	            renderAll(); 
+	        } catch (e) {
+	            console.error("Error loading data:", e);
+	        }
+	    }
+	
+	    /**
+	     * UI FILTER MANAGEMENT
+	     * Updates the active filter state and refreshes the history list styling.
+	     */
+	    function setFilter(filterType) {
+	        currentFilter = filterType;
+	        
+	        document.querySelectorAll('.filter-btn').forEach(btn => {
+	            btn.classList.remove('bg-white', 'shadow-sm', 'text-blue-600');
+	            btn.classList.add('text-gray-500');
+	        });
+	        
+	        const activeBtn = document.getElementById('btn-' + filterType);
+	        if(activeBtn) {
+	            activeBtn.classList.add('bg-white', 'shadow-sm', 'text-blue-600');
+	            activeBtn.classList.remove('text-gray-500');
+	        }
+	
+	        renderHistoryOnly(); 
+	    }
+	
+	    /**
+	     * SUMMARY & UNPAID LIST RENDERER
+	     * Calculates totals and populates the "Pending Collection" section.
+	     */ 
+	    function renderAll() {
+	        
+	        const paidLessons = paymentsData.filter(p => p.status === 'paid');
+	        const pendingLessons = paymentsData.filter(p => p.status !== 'paid');
+	
+	        const paidSum = paidLessons.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+	        const pendingSum = pendingLessons.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+	
+	        document.getElementById('totalPaid').innerText = `₪${paidSum}`;
+	        document.getElementById('totalPending').innerText = `₪${pendingSum}`;
+	        document.getElementById('unpaidCount').innerText = pendingLessons.length;
+	
+	        const unpaidList = document.getElementById('unpaidList');
+	        if (pendingLessons.length === 0) {
+	            unpaidList.innerHTML = `<div class="p-8 text-center text-gray-400 border-2 border-dashed rounded-3xl">אין שיעורים הממתינים לתשלום</div>`;
+	        } else {
+	            unpaidList.innerHTML = pendingLessons.map(p => `
+	                <div class="bg-white p-5 rounded-2xl border shadow-sm flex justify-between items-center mb-4 border-r-8 border-r-yellow-400">
+	                    <div>
+	                        <p class="font-bold text-gray-800 text-lg">${p.student}</p>
+	                        <p class="text-sm text-gray-500">${p.date} | ${p.time}</p>
+	                    </div>
+	                    <div class="flex items-center gap-6">
+	                        <span class="font-bold text-2xl text-gray-700">₪${p.amount}</span>
+	                        <button onclick="markAsPaid(${p.id})" class="bg-green-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-green-700 transition shadow-lg active:scale-95">
+	                            סמן כשולם
+	                        </button>
+	                    </div>
+	                </div>
+	            `).join('');
+	        }
+	
+	        renderHistoryOnly(); 
+	    }
+	
+	    /**
+	     * HISTORY TABLE RENDERER
+	     * Filters the dataset based on currentFilter and updates the DOM.
+	     */
+	    function renderHistoryOnly() {
+	        const historyDiv = document.getElementById('paymentsHistory');
+	        
+	        const filtered = paymentsData.filter(p => {
+	            if (currentFilter === 'all') return true;
+	            if (currentFilter === 'paid') return p.status === 'paid';
+	            if (currentFilter === 'pending') return p.status !== 'paid'; // מראה גם scheduled וגם pending
+	            return true;
+	        });
+	
+	        if (filtered.length === 0) {
+	            historyDiv.innerHTML = `<div class="p-16 text-center text-gray-400 italic">אין נתונים להצגה בקטגוריה זו</div>`;
+	            return;
+	        }
+	
+	        historyDiv.innerHTML = filtered.map(p => `
+	            <div class="p-5 flex justify-between items-center hover:bg-gray-50 transition border-b last:border-0">
+	                <div class="flex items-center gap-4">
+	                    <div class="${p.status === 'paid' ? 'text-green-600 bg-green-50' : 'text-yellow-600 bg-yellow-50'} p-2 rounded-full">
+	                        <i data-lucide="${p.status === 'paid' ? 'check-circle' : 'clock'}" class="w-5 h-5"></i>
+	                    </div>
+	                    <div>
+	                        <p class="font-bold text-gray-800">${p.student}</p>
+	                        <p class="text-xs text-gray-500">${p.date} - ${p.status}</p>
+	                    </div>
+	                </div>
+	                <p class="font-bold text-lg text-gray-700">₪${p.amount}</p>
+	            </div>
+	        `).join('');
+	        
+	        lucide.createIcons();
+	    }
+	
+	    /**
+	     * STATUS UPDATE HANDLER
+	     * Sends a request to the server to finalize a lesson payment.
+	     */
+	    async function markAsPaid(id) {
+	        const res = await fetch('UpdatePaymentStatusServlet', {
+	            method: 'POST',
+	            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	            body: `lessonId=${id}&status=paid`
+	        });
+	        if (res.ok) loadDataFromServlet();
+	    }
+	
+	    window.onload = loadDataFromServlet;
+	</script>
+</body>
+</html>

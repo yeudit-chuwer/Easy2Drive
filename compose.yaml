@@ -1,0 +1,8 @@
+﻿services:
+  easy2drive:
+    build: .
+    image: easy2drive:compose
+    container_name: easy2drive-compose
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
