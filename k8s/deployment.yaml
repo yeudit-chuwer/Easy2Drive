@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: easy2drive
-          image: 808935753986.dkr.ecr.eu-north-1.amazonaws.com/easy2drive:2.0
+          image: 808935753986.dkr.ecr.eu-north-1.amazonaws.com/easy2drive:2.1
           ports:
             - containerPort: 8080
           env:
