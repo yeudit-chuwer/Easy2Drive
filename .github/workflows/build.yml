@@ -1,0 +1,35 @@
+
+name: Easy2Drive CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Java WAR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build application with Maven
+        run: mvn clean package
+
+      - name: Verify WAR file
+        run: test -f target/Easy2Drive.war
+
+      - name: Build Docker image
+        run: docker build -t easy2drive:${{ github.sha }} .
