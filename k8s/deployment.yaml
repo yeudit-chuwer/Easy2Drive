@@ -1,9 +1,11 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: easy2drive
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: easy2drive
@@ -34,3 +36,4 @@ spec:
                 secretKeyRef:
                   name: easy2drive-db-secret
                   key: DB_PASSWORD
+
